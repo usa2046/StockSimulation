@@ -59,6 +59,8 @@ class saveToHtml():
 
 
     def draw_charts(self, chart_data):
+        l = len(chart_data['categoryData'])
+        slider_progress = 100 * (l - 20) / l
         kline_data = [data[1:-1] for data in chart_data["values"]]
         kline = (
             Kline()
@@ -77,7 +79,7 @@ class saveToHtml():
                         is_show=False,
                         type_="inside",
                         xaxis_index=[0, 1],
-                        range_start=0,
+                        range_start=slider_progress,
                         range_end=100,
                     ),
                     opts.DataZoomOpts(

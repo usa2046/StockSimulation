@@ -84,7 +84,7 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.centralwidget.setLayout(self.verticalLayout)
 
         self.lineEdit_Id.setText("000027.SZ")
-        self.lineEdit_start_time.setText('20210101')
+        self.lineEdit_start_time.setText('20190101')
         self.lineEdit_end_time.setText('20210601')
 
         self.EventButtonResetClicked()
@@ -219,6 +219,8 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.money_market_list.append([self.money_market])
         self.money_distr_list.append([self.money_distr])
         self.creatHtml()
+        self.EventSliderBuyModed()
+        self.EventSliderSellModed()
         self.printInfo()
         self.refreshLabelInfo()
 
