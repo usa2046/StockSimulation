@@ -60,6 +60,7 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.horizontalSlider_sell.sliderMoved.connect(self.EventSliderSellModed)
         self.pushButton_buy.clicked.connect(self.EventPushbuttonBuyClicked)
         self.pushButton_sell.clicked.connect(self.EventPushbuttonSellClicked)
+        self.pushButton_predict.clicked.connect(self.EventPushbuttonPredictClicked)
 
     def initUI(self):
         self.browser = QWebEngineView()
@@ -84,7 +85,7 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.centralwidget.setLayout(self.verticalLayout)
 
         self.lineEdit_Id.setText("000027.SZ")
-        self.lineEdit_start_time.setText('20190101')
+        self.lineEdit_start_time.setText('20180101')
         self.lineEdit_end_time.setText('20210601')
 
         self.EventButtonResetClicked()
@@ -173,6 +174,8 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.label_sell.setText(str(int(self.sell_money_temp)))
 
     def EventPushbuttonBuyClicked(self):
+        if self.kline_index >= len(self.kline_data_ori):
+            return
         if self.buy_num_temp == 0:
             return
         self.holding_num += self.buy_num_temp
@@ -188,8 +191,11 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.EventSliderSellModed()
         self.printInfo()
         self.refreshLabelInfo()
+        self.resetButtonStyleSeet()
 
     def EventPushbuttonSellClicked(self):
+        if self.kline_index >= len(self.kline_data_ori):
+            return
         if self.money_market <= 0:
             return
         if self.sell_num_temp == 0:
@@ -211,8 +217,11 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.EventSliderSellModed()
         self.printInfo()
         self.refreshLabelInfo()
+        self.resetButtonStyleSeet()
 
     def EventPushbuttonKeepClicked(self):
+        if self.kline_index >= len(self.kline_data_ori):
+            return
         self.stock_cost_list.append(self.stock_cost_list[-1])
         self.onoDayPast()
         self.money_market = self.holding_num * self.price # 计算市值
@@ -223,6 +232,31 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.EventSliderSellModed()
         self.printInfo()
         self.refreshLabelInfo()
+        self.resetButtonStyleSeet()
+
+    def resetButtonStyleSeet(self):
+        self.pushButton_buy.setStyleSheet("")
+        self.pushButton_sell.setStyleSheet("")
+        self.pushButton_keep.setStyleSheet("")
+
+    def doPredict(self):
+        '''
+        :return: 参数1：-1卖出 0保持 1买入     参数2：操作金额
+        '''
+        return 1, 1
+
+    def EventPushbuttonPredictClicked(self):
+        op, va = self.doPredict()
+        if 0 == op:
+            self.pushButton_keep.setStyleSheet("background-color: green")
+        elif -1 == op:
+            self.pushButton_keep.setStyleSheet("background-color: green")
+            self.horizontalSlider_sell.setValue(va)
+            self.EventSliderSellModed()
+        elif 1 == op:
+            self.pushButton_buy.setStyleSheet("background-color: green")
+            self.horizontalSlider_buy.setValue(va)
+            self.EventSliderBuyModed()
 
     def mousePressEvent(self, event):
         pos = event.pos()
