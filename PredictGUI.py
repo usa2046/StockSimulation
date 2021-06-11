@@ -9,6 +9,8 @@ from TushareData import TuShareData
 import numpy as np
 #from PyechartsData import KLineHtml
 from PyechartsData2 import saveToHtml
+import time
+import threading
 
 
 class StockSimulation(QMainWindow, Ui_MainWindow):
@@ -31,6 +33,9 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
     stock_cost_list = []    # 股票成本   持仓成本/持股数量
     money_distr_list = []
     money_market_list = []
+    predict_op = 0 # 预测结果（操作）
+    predict_state = 0 # 0 待预测   1 已预测，待执行
+    auto_predict_state = 0 # 0 未运行  1 运行中
 
 
     def __init__(self, *args, **kwargs):
@@ -61,6 +66,7 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.pushButton_buy.clicked.connect(self.EventPushbuttonBuyClicked)
         self.pushButton_sell.clicked.connect(self.EventPushbuttonSellClicked)
         self.pushButton_predict.clicked.connect(self.EventPushbuttonPredictClicked)
+        self.pushButton_auto_predict.clicked.connect(self.EventPushbuttonAutoPredictClicked)
 
     def initUI(self):
         self.browser = QWebEngineView()
@@ -108,16 +114,16 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
 
 
     def creatHtml(self):
-        #dir_path = os.path.dirname(os.path.abspath(__file__))
-        #dir_path = os.path.join(dir_path, "data.html")
-        #self.klinehtml.creat(self.kline_time_cur, self.kline_data_cur.tolist(), "data2.html", width=900)
         # 压入其他指标
         data = np.hstack((self.kline_data_cur, np.array(self.stock_cost_list)))
         data = np.hstack((data, np.array(self.money_market_list)))
         data = np.hstack((data, np.array(self.money_distr_list)))
         data = self.klinehtml.split_data(data.tolist())
         self.klinehtml.draw_charts(data)
-        self.browser.load(QUrl('file:///C:/Users/98548/Desktop/LKfilter/data3.html'))
+        dir_path = os.path.dirname(os.path.abspath(__file__))
+        dir_path = os.path.join(dir_path, "data.html")
+        #self.browser.load(QUrl('file:///C:/Users/98548/Desktop/LKfilter/data3.html'))
+        self.browser.load(QUrl.fromLocalFile(dir_path))
 
     def EventButtonResetClicked(self):
         self.initData()
@@ -159,7 +165,7 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
     def EventSliderBuyModed(self):
         value = self.horizontalSlider_buy.value()
         value = self.money_distr * value / 1000
-        self.buy_num_temp = int(value / (self.price * 100)) * 100 # 准备购买的股数
+        self.buy_num_temp = int((value + 1) / (self.price * 100)) * 100 # 准备购买的股数
         self.buy_money_temp = self.buy_num_temp * self.price
         self.label_buy.setText(str(int(self.buy_money_temp)))
 
@@ -234,29 +240,116 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.refreshLabelInfo()
         self.resetButtonStyleSeet()
 
+
     def resetButtonStyleSeet(self):
         self.pushButton_buy.setStyleSheet("")
         self.pushButton_sell.setStyleSheet("")
         self.pushButton_keep.setStyleSheet("")
+        self.pushButton_predict.setStyleSheet("")
+        self.pushButton_predict.setText("预测")
+        self.predict_state = 0
+
 
     def doPredict(self):
         '''
         :return: 参数1：-1卖出 0保持 1买入     参数2：操作金额
         '''
-        return 1, 1
+        op = 0 # 操作类型
+        va = 0 # 金额
+        stock_cost = self.stock_cost_list[-1][0] # 股票成本
+        # 入仓点
+        if self.price_change < -0.01 and self.holding_num == 0:
+            op = 1
+            va = self.price * 200 # 买入100股
+            return op, va
+        # 买
+        if self.price_change <= -0.02 or (stock_cost - self.price)/stock_cost >= 0.04:
+            a = stock_cost
+            b = self.price
+            n = self.holding_num
+            r = 0.6 # 股票成本和当前价格的接近率
+            p = b + (a - b) * r
+            m = n * (a - p) / (p - b) # 需要购买的股数
+            m = int(m / 100 + 1) * 100
+            op = 1
+            va = self.price * m
+            print(m, va, self.money_distr)
+            if m > 100 and va < self.money_distr:
+                return op, va
+            else:
+                op = 0
+        # 卖
+        if (self.price - stock_cost)/stock_cost > 0.03 and self.holding_num > 0:
+            op = -1
+            va = self.price * self.holding_num
+            return op, va
+        # 保持
+        #if abs(self.price_change) < 0.02 and abs(stock_cost - self.price)/stock_cost < 0.05:
+        #    op = 0
+        #    return op, va
+        return op, va
+
+    def changeValueToPercent(self, op, va):
+        if op == 1:
+            va = int(self.horizontalSlider_buy.maximum() * va / self.money_distr) + 1
+            if va > self.horizontalSlider_buy.maximum():
+                va = self.horizontalSlider_buy.maximum()
+        elif op == -1:
+            va = int(self.horizontalSlider_sell.maximum() * va / self.money_market) + 1
+            if va > self.horizontalSlider_sell.maximum():
+                va = self.horizontalSlider_sell.maximum()
+        if va < 0:
+            va = 0
+        return op, va
+
 
     def EventPushbuttonPredictClicked(self):
-        op, va = self.doPredict()
-        if 0 == op:
-            self.pushButton_keep.setStyleSheet("background-color: green")
-        elif -1 == op:
-            self.pushButton_keep.setStyleSheet("background-color: green")
-            self.horizontalSlider_sell.setValue(va)
-            self.EventSliderSellModed()
-        elif 1 == op:
-            self.pushButton_buy.setStyleSheet("background-color: green")
-            self.horizontalSlider_buy.setValue(va)
-            self.EventSliderBuyModed()
+        if self.predict_state == 0: # 预测
+            op, va = self.doPredict()
+            op, va = self.changeValueToPercent(op, va)
+            if 0 == op:
+                self.pushButton_keep.setStyleSheet("background-color: green")
+            elif -1 == op:
+                self.pushButton_sell.setStyleSheet("background-color: green")
+                self.horizontalSlider_sell.setValue(va)
+                self.EventSliderSellModed()
+            elif 1 == op:
+                self.pushButton_buy.setStyleSheet("background-color: green")
+                self.horizontalSlider_buy.setValue(va)
+                self.EventSliderBuyModed()
+            self.predict_op = op
+            self.pushButton_predict.setText("执行")
+            self.pushButton_predict.setStyleSheet("background-color: green")
+            self.predict_state = 1
+        elif self.predict_state == 1: # 执行
+            if self.predict_op == 0:
+                self.EventPushbuttonKeepClicked()
+            elif self.predict_op == -1:
+                self.EventPushbuttonSellClicked()
+            elif self.predict_op == 1:
+                self.EventPushbuttonBuyClicked()
+            self.predict_state = 0
+            self.resetButtonStyleSeet()
+
+    def autoPredict(self):
+        while True:
+            if self.kline_index >= len(self.kline_data_ori):
+                break
+            if self.auto_predict_state == 0:
+                break
+            self.pushButton_predict.click()
+            time.sleep(0.7)
+
+    def EventPushbuttonAutoPredictClicked(self):
+        if self.auto_predict_state == 0:
+            self.auto_predict_state = 1
+            t = threading.Thread(target=self.autoPredict)
+            t.start()
+            self.pushButton_auto_predict.setStyleSheet("background-color: green")
+        else:
+            self.auto_predict_state = 0
+            self.pushButton_auto_predict.setStyleSheet("")
+
 
     def mousePressEvent(self, event):
         pos = event.pos()

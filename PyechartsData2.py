@@ -286,7 +286,7 @@ class saveToHtml():
         #    ),
         #)
 
-        grid_chart.render("data3.html")
+        grid_chart.render("data.html")
 
 
 if __name__ == "__main__":

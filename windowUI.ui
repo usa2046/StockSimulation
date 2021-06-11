@@ -134,7 +134,7 @@
      <rect>
       <x>20</x>
       <y>610</y>
-      <width>173</width>
+      <width>371</width>
       <height>25</height>
      </rect>
     </property>
@@ -162,6 +162,13 @@
        </property>
        <property name="text">
         <string>预测</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QPushButton" name="pushButton_auto_predict">
+       <property name="text">
+        <string>自动预测</string>
        </property>
       </widget>
      </item>
