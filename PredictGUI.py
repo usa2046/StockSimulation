@@ -11,12 +11,14 @@ import numpy as np
 from PyechartsData2 import saveToHtml
 import time
 import threading
+import math
 
 
 class StockSimulation(QMainWindow, Ui_MainWindow):
     tu = TuShareData()
     klinehtml = saveToHtml()
     #klinehtml = KLineHtml()
+    datafram = [] # tushare 数据
     kline_data_ori = []
     kline_data_cur = []
     kline_index = 0
@@ -36,6 +38,11 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
     predict_op = 0 # 预测结果（操作）
     predict_state = 0 # 0 待预测   1 已预测，待执行
     auto_predict_state = 0 # 0 未运行  1 运行中
+    ave_p = 0
+    lbuy_p = 0
+    lsell_p = 0
+    last_money_all = 0
+    high_p = 0
 
 
     def __init__(self, *args, **kwargs):
@@ -45,7 +52,7 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.initEvent()
 
     def initData(self):
-        self.money_distr = 200000 # 可分配资金
+        self.money_distr = 100000 # 可分配资金
         self.money_market = 0 # 市值
         self.holding_num = 0 # 持股数量
         self.position_cost = 0 # 持仓成本  （总支出-总收入）
@@ -57,6 +64,14 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.stock_cost_list = []    # 股票成本   持仓成本/持股数量
         self.money_distr_list = []
         self.money_market_list = []
+        self.predict_op = 0 # 预测结果（操作）
+        self.predict_state = 0 # 0 待预测   1 已预测，待执行
+        self.auto_predict_state = 0 # 0 未运行  1 运行中
+        self.ave_p = 0
+        self.lbuy_p = 0
+        self.lsell_p = 0
+        self.last_money_all = 0
+        self.high_p = 0
 
     def initEvent(self):
         self.pushButton_reset.clicked.connect(self.EventButtonResetClicked)
@@ -90,9 +105,9 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.verticalLayout.addWidget(widget_predict)
         self.centralwidget.setLayout(self.verticalLayout)
 
-        self.lineEdit_Id.setText("000027.SZ")
-        self.lineEdit_start_time.setText('20180101')
-        self.lineEdit_end_time.setText('20210601')
+        self.lineEdit_Id.setText("002230.SZ")
+        self.lineEdit_start_time.setText('20190101')
+        self.lineEdit_end_time.setText('20200601')
 
         self.EventButtonResetClicked()
 
@@ -100,6 +115,7 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
     def getTushareData(self, ts_code, start_date, end_date):
         # 获取的原始数据
         df = self.tu.getDaily(ts_code=ts_code, start_date=start_date, end_date=end_date)
+        self.datafram = df
         n0 = df.values[:, 1:2]
         n1 = df.values[:, 2:3]
         n2 = df.values[:, 3:4]
@@ -146,6 +162,13 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         if self.price != 0:
             self.price_change = (self.kline_data_cur[-1, 2] - self.price) / self.price
         self.price = self.kline_data_cur[-1, 2] # 获取当前股价
+        self.ave_p = 0
+        self.ave_p += self.kline_data_cur[-1, 2]
+        self.ave_p += self.kline_data_cur[-2, 2]
+        self.ave_p += self.kline_data_cur[-3, 2]
+        self.ave_p += self.kline_data_cur[-4, 2]
+        self.ave_p += self.kline_data_cur[-5, 2]
+        self.ave_p = self.ave_p / 5
 
     def printInfo(self):
         print("------------------------------------")
@@ -249,6 +272,51 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         self.pushButton_predict.setText("预测")
         self.predict_state = 0
 
+    def doPredict2(self):
+        cost_p = self.stock_cost_list[-1][0]
+        # 第一次买入
+        if self.price < 0.97 * self.ave_p and self.holding_num == 0:
+            self.lbuy_p = self.price
+            self.lsell_p = self.price
+            self.last_money_all = self.money_distr
+            return 1, self.money_distr * 0.3
+        if self.holding_num == 0:
+            return 0, 0
+        # 买入
+        if self.price < cost_p:
+            self.lsell_p = self.price
+            self.high_p = self.price
+            if self.money_distr + self.money_market < 0.3 * self.last_money_all:
+                return -1, self.money_market
+            if self.lbuy_p - self.price > 0.05 * cost_p:
+                rate = (cost_p - self.price) / cost_p
+                va = self.money_distr * (math.exp(4 * rate) - 1)/ 3
+                self.lbuy_p = self.price
+                if va / self.price < 100:
+                    return 0, 0
+                return 1, va
+        # 卖出
+        else:
+            if self.price > self.high_p:
+                self.high_p = self.price
+            if self.price - self.lsell_p > 0.02 * cost_p:
+                self.lbuy_p = self.price
+                rate = (self.price - cost_p) / cost_p
+                va = self.money_market * (math.exp(1 * rate) - 1) / 3
+                self.lsell_p = self.price
+                if va / self.price < 100:
+                    return 0, 0
+                return -1, va
+            #if self.high_p - self.price > 0.05 * self.high_p:
+            #    rate = (self.high_p - self.price) / self.high_p
+            #    va = self.money_distr * (math.exp(4 * rate) - 1)/3
+            #    self.high_p = self.price
+            #    self.lbuy_p = self.price
+            #    return 1, va
+
+        return 0, 0
+
+
 
     def doPredict(self):
         '''
@@ -305,7 +373,7 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
 
     def EventPushbuttonPredictClicked(self):
         if self.predict_state == 0: # 预测
-            op, va = self.doPredict()
+            op, va = self.doPredict2()
             op, va = self.changeValueToPercent(op, va)
             if 0 == op:
                 self.pushButton_keep.setStyleSheet("background-color: green")
@@ -338,7 +406,7 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
             if self.auto_predict_state == 0:
                 break
             self.pushButton_predict.click()
-            time.sleep(0.7)
+            time.sleep(0.08)
 
     def EventPushbuttonAutoPredictClicked(self):
         if self.auto_predict_state == 0:
@@ -355,9 +423,39 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
         pos = event.pos()
         #print(pos.x(), pos.y())
 
+    def statisDistribute(self,data):
+        x_data = []
+        y_data = []
+        for i in range(200):
+            x_data.append(str(i))
+            y_data.append(0)
+        num = 0
+        for d in data:
+            num += 1
+            if num > 100000:
+                break
+            d += 5
+            d = d * 20
+            #d = d * 10
+            if d > 200:
+                d = 199
+            if d < 0:
+                d = 0
+            d = int(d)
+            y_data[d] += 1
+        self.klinehtml.draw_bar(x_data, y_data)
+
+    def analysisKline(self, kline):
+        #print(self.datafram)
+        data = self.datafram['change'].values
+        data = np.random.randn(100000)
+        self.statisDistribute(data)
+
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
     win = StockSimulation()
     win.show()
     sys.exit(app.exec_())
+    #win.analysisKline(win.kline_data_ori)
+    #win.klinehtml.draw_bar([])

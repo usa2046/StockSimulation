@@ -263,7 +263,7 @@ class saveToHtml():
         grid_chart = Grid(
             init_opts=opts.InitOpts(
                 #width="1000px",
-                #height="800px",
+                #height="2000px",
                 width="1850px",
                 height="850px",
                 animation_opts=opts.AnimationOpts(animation=False),
@@ -271,22 +271,36 @@ class saveToHtml():
         )
         grid_chart.add(
             overlap_kline_line,
-            grid_opts=opts.GridOpts(pos_left="10%", pos_right="8%", height="50%"),
+            grid_opts=opts.GridOpts(pos_left="10%", pos_right="8%", height="60%"),
         )
         grid_chart.add(
             bar_0,
             grid_opts=opts.GridOpts(
-                pos_left="10%", pos_right="8%", pos_top="63%", height="16%"
+                pos_left="10%", pos_right="8%", pos_top="70%", height="30%"
             ),
         )
         #grid_chart.add(
         #    bar,
         #    grid_opts=opts.GridOpts(
-        #        pos_left="10%", pos_right="8%", pos_top="63%", height="16%"
+        #        pos_left="10%", pos_right="8%", pos_top="700px", height="100px"
         #    ),
         #)
 
         grid_chart.render("data.html")
+
+    def draw_bar(self, x_data, y_data):
+        bar = (
+            Bar()
+            .add_xaxis(xaxis_data=x_data)
+            .add_yaxis(
+                series_name="market",
+                y_axis=y_data,
+                label_opts=opts.LabelOpts(is_show=False),
+            )
+            .set_global_opts(
+            )
+        )
+        bar.render("bar.html")
 
 
 if __name__ == "__main__":
