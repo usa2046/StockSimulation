@@ -307,12 +307,12 @@ class StockSimulation(QMainWindow, Ui_MainWindow):
                 if va / self.price < 100:
                     return 0, 0
                 return -1, va
-            #if self.high_p - self.price > 0.05 * self.high_p:
-            #    rate = (self.high_p - self.price) / self.high_p
-            #    va = self.money_distr * (math.exp(4 * rate) - 1)/3
-            #    self.high_p = self.price
-            #    self.lbuy_p = self.price
-            #    return 1, va
+            if self.high_p - self.price > 0.05 * self.high_p:
+                rate = (self.high_p - self.price) / self.high_p
+                va = self.money_distr * (math.exp(4 * rate) - 1)/3
+                self.high_p = self.price
+                self.lbuy_p = self.price
+                return 1, va
 
         return 0, 0
 
