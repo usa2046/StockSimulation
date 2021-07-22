@@ -265,7 +265,7 @@ class saveToHtml():
                 #width="1000px",
                 #height="2000px",
                 width="1850px",
-                height="850px",
+                height="830px",
                 animation_opts=opts.AnimationOpts(animation=False),
             )
         )
@@ -276,7 +276,7 @@ class saveToHtml():
         grid_chart.add(
             bar_0,
             grid_opts=opts.GridOpts(
-                pos_left="10%", pos_right="8%", pos_top="70%", height="30%"
+                pos_left="10%", pos_right="8%", pos_top="75%", height="22%"
             ),
         )
         #grid_chart.add(
