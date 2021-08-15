@@ -4,6 +4,7 @@ from typing import List, Union
 from pyecharts import options as opts
 from pyecharts.charts import Kline, Line, Bar, Grid
 from pyecharts.globals import ThemeType
+import numpy as np
 
 class saveToHtml():
     def __init__(self):
@@ -302,8 +303,54 @@ class saveToHtml():
         )
         bar.render("bar.html")
 
+class saveMutStockToHtlm():
+    def __init__(self):
+        pass
+
+    def drawOneStock(self, title, x_data, y_data):
+        '''
+        data: [[open close low high]]
+        '''
+        c = (
+            Kline()
+                .add_xaxis(x_data)
+                .add_yaxis(series_name='', y_axis=y_data)
+                .set_global_opts(
+                yaxis_opts=opts.AxisOpts(is_scale=True, name=title),
+                xaxis_opts=opts.AxisOpts(is_scale=True),
+                #title_opts=opts.TitleOpts(title=title),
+                )
+        )
+        return c
+
+    def drawMutStock(self, path, mut_sotck_input):
+        '''
+        绘制多个K线图
+        '''
+        h = len(mut_sotck_input) * 500
+        grid = Grid(
+            init_opts=opts.InitOpts(
+                width="1900px",
+                height="%dpx"%(h),
+                animation_opts=opts.AnimationOpts(animation=False),
+            )
+        )
+        for i, one_sotck_input in enumerate(mut_sotck_input):
+            title = one_sotck_input['title']
+            x_data = one_sotck_input['data'][:, 0].tolist()
+            y_data = one_sotck_input['data'][:, 1:5]
+            y_data = y_data.astype(np.float).tolist()
+            kline = self.drawOneStock(title, x_data, y_data)
+            grid.add(kline, grid_opts=opts.GridOpts(pos_left='120px',
+                                                    pos_top="%dpx"%(h / len(mut_sotck_input) * i + 30),
+                                                    height='400px'))
+        grid.render(path)
+
+
 
 if __name__ == "__main__":
-    a = saveToHtml()
-    data = a.get_data()
-    a.draw_charts(chart_data=data)
+    #a = saveToHtml()
+    #data = a.get_data()
+    #a.draw_charts(chart_data=data)
+    b = saveMutStockToHtlm()
+    b.drawOneStock()

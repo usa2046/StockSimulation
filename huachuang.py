@@ -183,9 +183,9 @@ class HuaChuang():
 if __name__ == "__main__":
     huachuang = HuaChuang()
     #huachuang.buy("000027", "9.54", "100")
-    #huachuang.sell("002497", "24.9", "100")
-    #huachuang.cancellations()
-    huachuang.read_stock()
+    #huachuang.sell("000966", "11.25", "100")
+    huachuang.cancellations()
+    #huachuang.read_stock()
     #img = ImageGrab.grab(bbox=(0, 0, 100, 100))
     #img = np.array(img.getdata(), np.uint8).reshape(img.size[1], img.size[0], 3)
     #cv2.imshow("1", img)
